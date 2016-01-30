@@ -11,7 +11,7 @@ Pebble.addEventListener("ready",
 
 Pebble.addEventListener('appmessage',
   function(e) {
-    if(e.payload.ADDRESS!=""){
+    if(e.payload.ADDRESS!=null){
       address = e.payload.ADDRESS;
       console.log('Using address: '+address)
       var req = new XMLHttpRequest();
