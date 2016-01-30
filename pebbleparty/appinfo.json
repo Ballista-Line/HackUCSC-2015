@@ -10,7 +10,9 @@
     "watchface": false
   },
   "appKeys": {
-    "dummy": 0
+    "DAX": 0,
+    "DAY": 1,
+    "DAZ": 2
   },
   "resources": {
     "media": []

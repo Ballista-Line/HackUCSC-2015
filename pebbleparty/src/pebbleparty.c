@@ -1,5 +1,9 @@
 #include <pebble.h>
 
+#define DAX 0
+#define DAY 1
+#define DAZ 2
+
 static Window *window;
 static TextLayer *text_layer;
 
@@ -25,6 +29,22 @@ static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+}
+
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
 
 static void window_load(Window *window) {
@@ -104,10 +124,22 @@ static void data_handler(AccelData *data, uint32_t samples){
    if(y > my) my = y;
    if(z > mz) mz = z;
 
+   short dx=0, dy=0, dz=0;
 
    if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 3000 ) {
       controlled_vibrate();
+
+      DictionaryIterator *iterator;
+      app_message_outbox_begin(&iterator);   
+
+      dict_write_int(iterator, DAX, &dx, sizeof(short), true /* signed */);
+      dict_write_int(iterator, DAY, &dy, sizeof(short), true /* signed */);
+      dict_write_int(iterator, DAZ, &dz, sizeof(short), true /* signed */);
+
+      app_message_outbox_send();
    }
+
+
 
 
    text_layer_set_text(text_layer, sbuffer);
@@ -118,6 +150,13 @@ static void init(void) {
    mx = 0;
    my = 0;
    mz = 0;
+
+   app_message_register_inbox_received(inbox_received_callback);
+   app_message_register_inbox_dropped(inbox_dropped_callback);
+   app_message_register_outbox_failed(outbox_failed_callback);
+   app_message_register_outbox_sent(outbox_sent_callback);
+
+   app_message_open(64, 64);
 
    window = window_create();
    window_set_click_config_provider(window, click_config_provider);
@@ -131,8 +170,8 @@ static void init(void) {
    accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
 
 
-  const bool animated = true;
-  window_stack_push(window, animated);
+   const bool animated = true;
+   window_stack_push(window, animated);
 }
 
 static void deinit(void) {
