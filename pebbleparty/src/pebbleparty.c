@@ -4,6 +4,11 @@
 #define DAY 1
 #define DAZ 2
 
+typedef enum{
+   main_vibe,
+   second_vibe
+}vibe_t;
+
 static Window *window;
 static TextLayer *text_layer;
 
@@ -98,8 +103,9 @@ int max(int x, int y){
 }
 
 //Custom vibration timeout as the default doesn't work
-void controlled_vibrate(){
-      vibes_short_pulse();
+void controlled_vibrate(vibe_t mode){
+      if(mode == main_vibe) vibes_short_pulse();
+      if(mode == second_vibe) vibes_double_pulse();
       vibrated = true;
       app_timer_register(300, vibration_reset_handler, NULL);
 }
@@ -127,7 +133,7 @@ void data_handler(AccelData *data, uint32_t samples){
 
    //Sends delta A results to the phone for external use
    //This WILL have to be limited for performance reasons
-   if(dx | dy | dz) {
+   if((abs(dx) | abs(dy) | abs(dz)) > 1000) {
       DictionaryIterator *iterator;
       app_message_outbox_begin(&iterator);   
 
@@ -138,8 +144,8 @@ void data_handler(AccelData *data, uint32_t samples){
       app_message_outbox_send();
    }
    //Vibrate if acceleration over a threshold
-   if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 3000 ) {
-      controlled_vibrate();
+   if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 2000 ) {
+      controlled_vibrate(main_vibe);
    }
 
    //Prints to the pebble
@@ -171,8 +177,8 @@ void init(void) {
    app_message_register_outbox_failed(outbox_failed_callback);
    app_message_register_outbox_sent(outbox_sent_callback);
 
-   //Message buffer with inbox and outbox size of 64 
-   app_message_open(1024, 1024);
+   //Message buffer with inbox and outbox size of 1024 
+   app_message_open(128, 4096);
 
    window = window_create();
    window_set_click_config_provider(window, click_config_provider);

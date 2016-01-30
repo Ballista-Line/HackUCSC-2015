@@ -12,7 +12,9 @@
   "appKeys": {
     "DAX": 0,
     "DAY": 1,
-    "DAZ": 2
+    "DAZ": 2,
+    "MAIN":3,
+    "ALT":4
   },
   "resources": {
     "media": []
