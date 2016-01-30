@@ -1,7 +1,6 @@
 <?php
 $data = $_GET["data"];
-print($data);
-//require "dbinfo.php";
+require "dbinfo.php";
 
 // 
 // $sql = "";
@@ -29,5 +28,11 @@ print($data);
 // } else {
 //     echo "Error: " . $sql . "<br>" . mysqli_error($conn);
 // }
-//mysqli_close($conn);
+$sql = "SELECT * FROM pebIn";
+$result = mysqli_query($conn, $sql) or die(mysqli_error($conn));
+mysqli_close($conn);
+
+while($row = mysqli_fetch_assoc($result)) {
+   print($row["command"]);
+}
 ?>
