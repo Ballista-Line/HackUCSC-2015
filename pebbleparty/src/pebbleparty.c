@@ -3,11 +3,12 @@
 #define DAX 0
 #define DAY 1
 #define DAZ 2
+#define MAIN 3
+#define ALT 4
+#define ID 5
+#define ADDRESS 6
 
-typedef enum{
-   main_vibe,
-   second_vibe
-}vibe_t;
+const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
 
 static Window *window;
 static TextLayer *text_layer;
@@ -21,7 +22,15 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  
+   ////TO BE MOVED LATER////
+   // will be selectable
+
+   DictionaryIterator *iterator;
+   app_message_outbox_begin(&iterator);
+
+   dict_write_cstring(iterator, ADDRESS, primary_server);
+
+   app_message_outbox_send();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -103,14 +112,14 @@ int max(int x, int y){
 }
 
 //Custom vibration timeout as the default doesn't work
-void controlled_vibrate(vibe_t mode){
-      if(mode == main_vibe) vibes_short_pulse();
-      if(mode == second_vibe) vibes_double_pulse();
+void controlled_vibrate(int mode){
+      if(mode == MAIN) vibes_short_pulse();
+      if(mode == ALT) vibes_double_pulse();
       vibrated = true;
       app_timer_register(300, vibration_reset_handler, NULL);
 }
 
-void data_handler(AccelData *data, uint32_t samples){
+void input_handler(AccelData *data, uint32_t samples){
    int x = data[0].x;
    int y = data[0].y;
    int z = data[0].z;
@@ -131,15 +140,24 @@ void data_handler(AccelData *data, uint32_t samples){
    if(abs(dy) < 100) dy = 0;
    if(abs(dz) < 100) dz = 0;
 
+   //Determine if a primary or alternate action has occured (or neither)
+
+
+
+
+
+
+
+   /*
    //Sends delta A results to the phone for external use
    //This WILL have to be limited for performance reasons
    if((abs(dx) | abs(dy) | abs(dz)) > 1000) {
       DictionaryIterator *iterator;
       app_message_outbox_begin(&iterator);   
 
-      dict_write_int(iterator, DAX, &dx, sizeof(dx), true /* signed */);
-      dict_write_int(iterator, DAY, &dy, sizeof(dy), true /* signed */);
-      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true /* signed */);
+      dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
+      dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
+      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
 
       app_message_outbox_send();
    }
@@ -147,6 +165,29 @@ void data_handler(AccelData *data, uint32_t samples){
    if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 2000 ) {
       controlled_vibrate(main_vibe);
    }
+   */
+
+
+
+   if((abs(dx) | abs(dy) | abs(dz)) > 1000) {
+      DictionaryIterator *iterator;
+      app_message_outbox_begin(&iterator);
+
+      //It seems like each message needs a value. 
+      bool val = true;
+      dict_write_int(iterator, MAIN, &val, sizeof(bool), true);
+
+      dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
+      dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
+      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
+
+      app_message_outbox_send();
+   }
+
+   if(false) {
+
+   }
+
 
    //Prints to the pebble
    static char sbuffer[128];
@@ -188,7 +229,7 @@ void init(void) {
    });
 
    uint32_t samples = 1;
-   accel_data_service_subscribe(samples, data_handler);
+   accel_data_service_subscribe(samples, input_handler);
    accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
 
    const bool animated = true;
