@@ -7,47 +7,45 @@
 static Window *window;
 static TextLayer *text_layer;
 
-static int mx, my, mz;
-static bool vibrated = false;
-
-
-/*
-  These will be used to navigate the menus
-*/
+int mx, my, mz; //Maximum x,y,z acceleration
+int px, py, pz; //Previous x,y,z accerlation
+bool vibrated = false;
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   mx = my = mz = 0; //Reset recorded max accelerations
 }
+
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   
 }
+
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   
 }
 
-static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+void click_config_provider(void *context) {
+   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
+   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
-static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
+void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+   APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
 }
 
-static void inbox_dropped_callback(AppMessageResult reason, void *context) {
-  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+void inbox_dropped_callback(AppMessageResult reason, void *context) {
+   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
 }
 
-static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
-  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
 }
 
-static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
 }
 
-static void window_load(Window *window) {
+void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
@@ -59,15 +57,15 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(text_layer));
 }
 
-static void window_unload(Window *window) {
+void window_unload(Window *window) {
   text_layer_destroy(text_layer);
 }
 
-static void vibration_reset_handler(void* v){
+void vibration_reset_handler(void* v){
    vibrated = false;
 }
 
-
+//integer sqrt, found on stackoverflow
 uint32_t misqrt(uint32_t a_nInput)
 {
     uint32_t op  = a_nInput;
@@ -106,83 +104,97 @@ void controlled_vibrate(){
       app_timer_register(300, vibration_reset_handler, NULL);
 }
 
-static void data_handler(AccelData *data, uint32_t samples){
-   static char sbuffer[128];
-
+void data_handler(AccelData *data, uint32_t samples){
    int x = data[0].x;
    int y = data[0].y;
    int z = data[0].z;
 
-
-   snprintf(sbuffer, sizeof(sbuffer), 
-    "X,Y,Z\n %d,%d,%d\n %d,%d,%d \n%d", 
-    x, y, z, 
-    mx, my, mz, vibrated
-  );
-
+   //Check if there is a new maximum acceleration
    if(x > mx) mx = x;
    if(y > my) my = y;
    if(z > mz) mz = z;
 
-   short dx=0, dy=0, dz=0;
+   //Find change in accerlation
+   int dx=x-px;
+   int dy=y-py;
+   int dz=z-pz;
 
-   if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 3000 ) {
-      controlled_vibrate();
+   //Round values near 0 to 0
+   //Gravity is very problematic
+   if(abs(dx) < 100) dx = 0;
+   if(abs(dy) < 100) dy = 0;
+   if(abs(dz) < 100) dz = 0;
 
+   //Sends delta A results to the phone for external use
+   //This WILL have to be limited for performance reasons
+   if(dx | dy | dz) {
       DictionaryIterator *iterator;
       app_message_outbox_begin(&iterator);   
 
-      dict_write_int(iterator, DAX, &dx, sizeof(short), true /* signed */);
-      dict_write_int(iterator, DAY, &dy, sizeof(short), true /* signed */);
-      dict_write_int(iterator, DAZ, &dz, sizeof(short), true /* signed */);
+      dict_write_int(iterator, DAX, &dx, sizeof(dx), true /* signed */);
+      dict_write_int(iterator, DAY, &dy, sizeof(dy), true /* signed */);
+      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true /* signed */);
 
       app_message_outbox_send();
    }
+   //Vibrate if acceleration over a threshold
+   if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 3000 ) {
+      controlled_vibrate();
+   }
 
-
-
+   //Prints to the pebble
+   static char sbuffer[128];
+   snprintf(sbuffer, sizeof(sbuffer), 
+    "X,Y,Z\n %d,%d,%d\n %d,%d,%d \n %d,%d,%d\n%d", 
+    x, y, z, 
+    mx, my, mz,
+    dx, dy, dz, vibrated
+  );
 
    text_layer_set_text(text_layer, sbuffer);
+
+   //Set new previous accerlations
+   px = x;
+   py = y;
+   pz = z;
 }
 
 
-static void init(void) {
+void init(void) {
    mx = 0;
    my = 0;
    mz = 0;
 
+   //Sets Pebble <-> Phone message callbacks
    app_message_register_inbox_received(inbox_received_callback);
    app_message_register_inbox_dropped(inbox_dropped_callback);
    app_message_register_outbox_failed(outbox_failed_callback);
    app_message_register_outbox_sent(outbox_sent_callback);
 
-   app_message_open(64, 64);
+   //Message buffer with inbox and outbox size of 64 
+   app_message_open(1024, 1024);
 
    window = window_create();
    window_set_click_config_provider(window, click_config_provider);
    window_set_window_handlers(window, (WindowHandlers) {
         .load = window_load,
         .unload = window_unload,
-    });
+   });
 
    uint32_t samples = 1;
    accel_data_service_subscribe(samples, data_handler);
-   accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
-
+   accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
 
    const bool animated = true;
    window_stack_push(window, animated);
 }
 
-static void deinit(void) {
+void deinit(void) {
   window_destroy(window);
 }
 
 int main(void) {
   init();
-
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
-
   app_event_loop();
   deinit();
 }
