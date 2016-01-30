@@ -1,12 +1,16 @@
 #include <pebble.h>
 
+#define DEBUG 
+
 #define DAX 0
 #define DAY 1
 #define DAZ 2
-#define MAIN 3
-#define ALT 4
-#define ID 5
-#define ADDRESS 6
+#define ACTION 3
+#define FORCE 4
+#define ADDRESS 5
+
+#define MAIN 0
+#define ALT 1
 
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
 
@@ -16,12 +20,13 @@ static TextLayer *text_layer;
 int mx, my, mz; //Maximum x,y,z acceleration
 int px, py, pz; //Previous x,y,z accerlation
 bool vibrated = false;
+bool recent_action = false;
 
-static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   mx = my = mz = 0; //Reset recorded max accelerations
 }
 
-static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+void up_click_handler(ClickRecognizerRef recognizer, void *context) {
    ////TO BE MOVED LATER////
    // will be selectable
 
@@ -33,7 +38,7 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
    app_message_outbox_send();
 }
 
-static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   
 }
 
@@ -79,6 +84,10 @@ void vibration_reset_handler(void* v){
    vibrated = false;
 }
 
+void action_delay_handler(void* v){
+   recent_action = false;
+}
+
 //integer sqrt, found on stackoverflow
 uint32_t misqrt(uint32_t a_nInput)
 {
@@ -113,10 +122,23 @@ int max(int x, int y){
 
 //Custom vibration timeout as the default doesn't work
 void controlled_vibrate(int mode){
+      vibrated = true;
+
       if(mode == MAIN) vibes_short_pulse();
       if(mode == ALT) vibes_double_pulse();
-      vibrated = true;
       app_timer_register(300, vibration_reset_handler, NULL);
+}
+
+void send_action(int mode) {
+   recent_action = true;
+
+   DictionaryIterator *iterator;
+   app_message_outbox_begin(&iterator);
+   dict_write_int(iterator, ACTION, &mode, sizeof(int), true);
+   app_message_outbox_send();
+
+
+   app_timer_register(300, action_delay_handler, NULL);
 }
 
 void input_handler(AccelData *data, uint32_t samples){
@@ -169,19 +191,33 @@ void input_handler(AccelData *data, uint32_t samples){
 
 
 
-   if((abs(dx) | abs(dy) | abs(dz)) > 1000) {
-      DictionaryIterator *iterator;
-      app_message_outbox_begin(&iterator);
+   if((abs(dx) | abs(dy) | abs(dz)) > 1000 && !recent_action) {
 
-      //It seems like each message needs a value. 
-      bool val = true;
-      dict_write_int(iterator, MAIN, &val, sizeof(bool), true);
+      #ifdef DEBUGN
+         DictionaryIterator *iterator;
+         app_message_outbox_begin(&iterator);
 
-      dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
-      dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
-      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
+         dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
+         dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
+         dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
 
-      app_message_outbox_send();
+         app_message_outbox_send();
+      #endif
+
+
+
+      if (abs(dx) > abs(dy)) send_action(MAIN);
+      else
+      if (abs(dy) + abs(dz) > abs(dx)) send_action(ALT);
+      
+
+
+      //dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
+      //dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
+      //dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
+
+
+     // app_message_outbox_send();
    }
 
    if(false) {

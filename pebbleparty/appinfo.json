@@ -13,10 +13,9 @@
     "DAX": 0,
     "DAY": 1,
     "DAZ": 2,
-    "MAIN":3,
-    "ALT":4,
-    "ID":5,
-    "ADDRESS":6
+    "ACTION":3,
+    "FORCE":4,
+    "ADDRESS":5
   },
   "resources": {
     "media": []
