@@ -23,7 +23,7 @@
 #define ACCEL_SAMPLES 5
 
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
-const char* secondary_server = "http://faustfamily.me"
+const char* secondary_server = "http://faustfamily.me";
 
 static Window *window;
 static TextLayer *text_layer;
