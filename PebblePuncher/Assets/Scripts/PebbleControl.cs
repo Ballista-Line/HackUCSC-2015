@@ -48,7 +48,7 @@ public class PebbleControl : MonoBehaviour
         yield return www;
         JSONObject pebbleInput = new JSONObject(www.text);
 
-        Debug.Log(pebbleInput.GetField("ACTION").n);
+        //Debug.Log(pebbleInput.GetField("ACTION").n);
 
         int swingSword = (int)pebbleInput.GetField("ACTION").n;
         if (swingSword == 0)
@@ -71,4 +71,5 @@ public class PebbleControl : MonoBehaviour
             enemyDead = true;
         }
     }
+
 }
