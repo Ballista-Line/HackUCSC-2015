@@ -24,7 +24,16 @@ function waitForInput(whichURL)
       pcall(function()
          local myTableJSON = HS:GetAsync(whichURL, true)
          local obj = HS:JSONDecode(myTableJSON)
-         action = obj.ACTION
+         obj.DAX = math.abs(obj.DAX)
+         obj.DAY = math.abs(obj.DAY)
+         obj.DAZ = math.abs(obj.DAZ)
+         if(obj.DAX > obj.DAY and obj.DAX > obj.DAZ)then
+            action = 0
+         elseif(obj.DAY > obj.DAX and obj.DAY > obj.DAZ)then
+            action = 1
+         elseif(obj.DAZ > obj.DAX and obj.DAZ > obj.DAY)then
+            action = 2
+         end
          data = obj
       end)
       if(action~=-1)then break end
@@ -74,6 +83,8 @@ function Destroy(parts)
 end
 
 function RPS()
+   Bullet.Transparency =1
+   Target.Transparency =1
    local ai = math.random(0,2)
    waitForInput(URL1)
    print(choiceString(action).." vs "..choiceString(ai))
@@ -97,6 +108,7 @@ end
 
 function targetPractice()
    waitForInput(URL1)
+   
    local vel = Vector3.new(-data.DAX/scale,data.DAZ/scale,-data.DAY/scale)
    local acc = -vel.unit/30
    Bullet.CFrame = Play.CFrame + vel
@@ -113,5 +125,5 @@ function targetPractice()
    targetPractice()
 end
 
---RPS()
-targetPractice()
+RPS()
+--targetPractice()
