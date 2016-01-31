@@ -15,9 +15,17 @@
     "DAZ": 2,
     "ACTION":3,
     "MAGA":4,
-    "ADDRESS":5
+    "ADDRESS":5,
+    "MESSAGE":6,
+    "CONNECTED":7
   },
   "resources": {
-    "media": []
+    "media": [
+      {
+        "name": "MENUICON",
+        "file": "menu_icon_vert.png",
+        "type": "png"
+      }
+    ]
   }
 }

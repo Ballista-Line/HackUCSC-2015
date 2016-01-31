@@ -9,6 +9,8 @@
 #define ACTION 3
 #define MAGA 4
 #define ADDRESS 5
+#define MESSAGE 6
+#define CONNECTED 7
 
 //Action modes
 #define MAIN 0
@@ -24,6 +26,7 @@
 
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
 const char* secondary_server = "http://faustfamily.me";
+const char* custom_server = "thiswebsitewontworkdsffd.com";
 
 static Window* window;
 static TextLayer* text_layer;
@@ -32,6 +35,8 @@ static ActionBarLayer* action_bar;
 
 static ActionMenu* action_menu;
 static ActionMenuLevel* root_level;
+
+static GBitmap* menu_bmp;
 
 
 
@@ -51,6 +56,7 @@ int mx, my, mz; //Maximum x,y,z acceleration
 int px, py, pz; //Previous x,y,z accerlation
 bool vibrated = false;
 bool recent_action = false;
+bool connected = false;
 
 void select_click_handler(ClickRecognizerRef recognizer, void *context) {
    mx = my = mz = 0; //Reset recorded max accelerations
@@ -90,18 +96,40 @@ void action_performed_callback(ActionMenu *action_menu, const ActionMenuItem *ac
    DictionaryIterator *iterator;
    app_message_outbox_begin(&iterator);
 
+   const char* selected_server = secondary_server;
+
    if(server == primary) {
-      dict_write_cstring(iterator, ADDRESS, primary_server);
+      selected_server = primary_server;
    } 
    else if (server == secondary) {
-      dict_write_cstring(iterator, ADDRESS, secondary_server);
+      selected_server = secondary_server;
+   } 
+   else {
+      selected_server = custom_server;
    }
 
+   dict_write_cstring(iterator, ADDRESS, selected_server);
    app_message_outbox_send();
+
+   text_layer_set_text(text_layer, "Connecting...");
 }
 
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
    APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
+
+   
+   Tuple* data = dict_find(iterator, MESSAGE);
+   if (data) {
+      //snprintf(s_buffer, sizeof(s_buffer), "Received '%s'", data->value->cstring);
+      text_layer_set_text(text_layer, data->value->cstring);
+   }
+
+   data = dict_find(iterator, CONNECTED);
+   if (data) {
+      //snprintf(s_buffer, sizeof(s_buffer), "Received '%s'", data->value->cstring);
+      connected = data->value->uint32;
+   }
+
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {
@@ -131,11 +159,11 @@ void window_load(Window *window) {
    Layer *window_layer = window_get_root_layer(window);
    GRect bounds = layer_get_bounds(window_layer);
 
-   //s_ellipsis_bitmap = gbitmap_create_with_resource(RESOURCE_ID_ELLIPSIS);
+   menu_bmp = gbitmap_create_with_resource(RESOURCE_ID_MENUICON);
 
    action_bar = action_bar_layer_create();
    action_bar_layer_set_click_config_provider(action_bar, click_config_provider);
-   //action_bar_layer_set_icon(action_bar, BUTTON_ID_SELECT, s_ellipsis_bitmap);
+   action_bar_layer_set_icon(action_bar, BUTTON_ID_SELECT, menu_bmp);
    action_bar_layer_add_to_window(action_bar, window);
 
    text_layer = text_layer_create(GRect(0, 0, bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h));
@@ -294,18 +322,19 @@ void input_handler(AccelData *data, uint32_t samples){
          if (abs(dy) + abs(dz) > abs(dx)) send_action(ALT, magna);
       #endif
    }
-/*
+
+   if(connected){
    //Prints to the pebble
    static char sbuffer[128];
    snprintf(sbuffer, sizeof(sbuffer), 
-    "X,Y,Z\n %d,%d,%d\n %d,%d,%d \n %d,%d,%d\n%d", 
-    x, y, z, 
-    mx, my, mz,
-    dx, dy, dz, vibrated
+    "Connected \n---------------\n %d\n%d\n%d\n---------------", 
+    dx, dy, dz
+    //mx, my, mz,
+    //dx, dy, dz, vibrated
   );
 
    text_layer_set_text(text_layer, sbuffer);
-*/
+   }
    //Set new previous accerlations
    px = x;
    py = y;

@@ -16,7 +16,36 @@ Pebble.addEventListener('appmessage',
       console.log('Using address: '+address)
       var req = new XMLHttpRequest();
       req.open('GET', address+'?id='+token);
+
+
+      req.onreadystatechange = function() {
+        if (req.readyState === 4) { //Done
+
+          if (req.status === 200) { //Worked
+            var dict = {'MESSAGE':'Connected', 'CONNECTED':1};
+            console.log("Connected to server!");
+          } else {
+            var dict = {'MESSAGE':'Failed to connect', 'CONNECTED':0};
+            console.log("Failed to connect to server")
+          }
+
+          //Tell pebble if we were able to connect to the server
+          Pebble.sendAppMessage(dict, function(e) {
+            console.log('Sent message.');
+          }, function(e) {
+            console.log('Send failed!');
+          });
+
+        }
+      }
+
+
       req.send();
+
+
+      //Tell pebble if we were able to connect to the server
+
+
     }else{
       var message = JSON.stringify(e.payload);
       console.log('Received message: ' + message);
