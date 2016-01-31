@@ -51,7 +51,7 @@ public class PebbleControl : MonoBehaviour
         Debug.Log(pebbleInput.GetField("ACTION").n);
 
         int swingSword = (int)pebbleInput.GetField("ACTION").n;
-        if (swingSword == 0)
+        if (swingSword == 0 || swingSword == 1)
         {
             animator.SetTrigger("Swing");
             swingSword = 1;
