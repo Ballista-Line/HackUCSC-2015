@@ -2,6 +2,7 @@
 
 #define DEBUG 
 
+//AppMessage keys
 #define DAX 0
 #define DAY 1
 #define DAZ 2
@@ -9,9 +10,12 @@
 #define MAGA 4
 #define ADDRESS 5
 
+//Action modes
 #define MAIN 0
 #define ALT 1
+#define SWINGDOWN 2
 
+//Times, in ms
 #define ACTION_RESET_DELAY 500
 #define VIBE_RESET_DELAY 300
 
@@ -19,6 +23,7 @@
 #define ACCEL_SAMPLES 5
 
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
+const char* secondary_server = "http://faustfamily.me"
 
 static Window *window;
 static TextLayer *text_layer;
@@ -39,7 +44,7 @@ void up_click_handler(ClickRecognizerRef recognizer, void *context) {
    DictionaryIterator *iterator;
    app_message_outbox_begin(&iterator);
 
-   dict_write_cstring(iterator, ADDRESS, primary_server);
+   dict_write_cstring(iterator, ADDRESS, secondary_server);
 
    app_message_outbox_send();
 }
@@ -152,18 +157,18 @@ void input_handler(AccelData *data, uint32_t samples){
    int y = 0;
    int z = 0;
 
+   //Average the acceleration samples
    for(unsigned int i = 0; i < ACCEL_SAMPLES; i++){
       x += data[i].x;
       y += data[i].y;
       z += data[i].z;
    }
 
-   x = x / ACCEL_SAMPLES;
+   x /= ACCEL_SAMPLES;
    y /= ACCEL_SAMPLES;
    z /= ACCEL_SAMPLES;
 
    //Check if there is a new maximum acceleration
-
    if(x > mx) mx = x;
    if(y > my) my = y;
    if(z > mz) mz = z;
@@ -175,39 +180,11 @@ void input_handler(AccelData *data, uint32_t samples){
 
    //Round values near 0 to 0
    //Gravity is very problematic
-   if(abs(dx) < 100) dx = 0;
-   if(abs(dy) < 100) dy = 0;
-   if(abs(dz) < 100) dz = 0;
+  // if(abs(dx) < 100) dx = 0;
+  // if(abs(dy) < 100) dy = 0;
+  // if(abs(dz) < 100) dz = 0;
 
-   //Determine if a primary or alternate action has occured (or neither)
-
-
-
-
-
-
-
-   /*
-   //Sends delta A results to the phone for external use
-   //This WILL have to be limited for performance reasons
-   if((abs(dx) | abs(dy) | abs(dz)) > 1000) {
-      DictionaryIterator *iterator;
-      app_message_outbox_begin(&iterator);   
-
-      dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
-      dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
-      dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
-
-      app_message_outbox_send();
-   }
-   //Vibrate if acceleration over a threshold
-   if (!vibrated && max(abs(x), max(abs(y), abs(z))) > 2000 ) {
-      controlled_vibrate(main_vibe);
-   }
-   */
-
-
-
+   //Determine if an action has been performed
    if(((abs(dx) > 1500) || (abs(dy) > 1500) || (abs(dz) > 1500)) && !recent_action) {
 
 
@@ -223,9 +200,25 @@ void input_handler(AccelData *data, uint32_t samples){
 
 
          int mode = -1;
-         if (abs(dx) > abs(dy)) mode = 0;
+         /*
+         bool forward = abs(dx) > abs(dy);
+         bool sideside = abs(dy) + abs(dz) > abs(dx);
+
+         if(forward) mode = 0;
+         if(sideside) mode = 1;
+         if(forward&&sideside) mode = 2;
+         */
+
+         
+         if (abs(dx) > abs(dy)) {
+            mode = 0;
+         }
          else
-         if (abs(dy) + abs(dz) > abs(dx)) mode = 1;
+         if (abs(dy) + abs(dz) > abs(dx)){
+            mode = 1;
+         }
+
+         
 
          if(mode > -1) {
             recent_action = true;
@@ -242,24 +235,8 @@ void input_handler(AccelData *data, uint32_t samples){
          else
          if (abs(dy) + abs(dz) > abs(dx)) send_action(ALT, magna);
       #endif
-
-
-      
-
-
-      //dict_write_int(iterator, DAX, &dx, sizeof(dx), true);
-      //dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
-      //dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
-
-
-     // app_message_outbox_send();
    }
-
-   if(false) {
-
-   }
-
-
+/*
    //Prints to the pebble
    static char sbuffer[128];
    snprintf(sbuffer, sizeof(sbuffer), 
@@ -270,7 +247,7 @@ void input_handler(AccelData *data, uint32_t samples){
   );
 
    text_layer_set_text(text_layer, sbuffer);
-
+*/
    //Set new previous accerlations
    px = x;
    py = y;
