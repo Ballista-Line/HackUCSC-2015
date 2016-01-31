@@ -19,14 +19,14 @@
 
 //Times, in ms
 #define ACTION_RESET_DELAY 500
-#define VIBE_RESET_DELAY 300
+#define VIBE_RESET_DELAY 500
 
 //Doesn't work as a variable for some reason
 #define ACCEL_SAMPLES 5
 
 const char* primary_server = "panopticon.ballistaline.com/pebble.php";
 const char* secondary_server = "faustfamily.me";
-const char* custom_server = "thiswebsitewontworkdsffd.com";
+const char* custom_server = "169.233.11.119";
 
 static Window* window;
 static TextLayer* text_layer;

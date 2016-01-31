@@ -1,5 +1,5 @@
 //var ws = new WebSocket('ws://10.0.1.14:8888');
-var ws = new WebSocket('ws://169.233.11.119:8888');
+//var ws = new WebSocket('ws://169.233.10.52:8888');
 
 var token = null;
 var address = "";
@@ -26,9 +26,9 @@ Pebble.addEventListener('appmessage',
 
 
       wsaddres = e.payload.ADDRESS;
-      ws = new WebSocket('ws://'+e.payload.ADDRESS);
+      //ws = new WebSocket('ws://'+e.payload.ADDRESS+':8888');
 
-      ws.send("hello");
+      //ws.send("hello");
 
 
       req.onreadystatechange = function() {
@@ -66,12 +66,7 @@ Pebble.addEventListener('appmessage',
       req.open('GET', address+'?data='+message+'&id='+token);
       req.send();
 
-      ws.send("lolol");
-
-
-
-
-
+      //ws.send(message);
     }
   }
 );
