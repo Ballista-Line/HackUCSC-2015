@@ -1,9 +1,15 @@
 local HS = game:GetService("HttpService")
-local URL = 'http://panopticon.ballistaline.com/pebble.php?id=004441df9afa72984c974fab35774222&over={"ACTION":-1}'
+local URL1 = 'http://www.faustfamily.me/?id=004441df9afa72984c974fab35774222&over={"MAGA":0,"DAY":0,"DAX":0,"ACTION":-1,"DAZ":0}'
+local URL2 = 'http://www.faustfamily.me/?id=004441df9afa72984c974fab35774222'
 local action = -1
+local data = {}
 local inputFrequency = 7; --DO NOT GO ABOVE 8
 local P1 = workspace.P1;
 local P2 = workspace.P2;
+local Bullet = workspace.Bullet;
+local Target = workspace.Target;
+local Play = workspace.Play;
+local scale = 1000;
 
 game.Players.ChildAdded:connect(function(player)
    player.CharacterAdded:connect(function(character)
@@ -11,14 +17,15 @@ game.Players.ChildAdded:connect(function(player)
    end)
 end)
 
-function waitForInput()
+function waitForInput(whichURL)
    print("Waiting for input... ")
    action = -1
    while(wait(1/inputFrequency))do
       pcall(function()
-         local myTableJSON = HS:GetAsync(URL, true)
+         local myTableJSON = HS:GetAsync(whichURL, true)
          local obj = HS:JSONDecode(myTableJSON)
          action = obj.ACTION
+         data = obj
       end)
       if(action~=-1)then break end
    end
@@ -68,7 +75,7 @@ end
 
 function RPS()
    local ai = math.random(0,2)
-   waitForInput()
+   waitForInput(URL1)
    print(choiceString(action).." vs "..choiceString(ai))
    local parts = spawnParts(ai)
    wait(1)
@@ -88,4 +95,23 @@ function RPS()
    RPS()
 end
 
-RPS()
+function targetPractice()
+   waitForInput(URL1)
+   local vel = Vector3.new(-data.DAX/scale,data.DAZ/scale,-data.DAY/scale)
+   local acc = -vel.unit/30
+   Bullet.CFrame = Play.CFrame + vel
+   local t = 0
+   local dt = 0.01
+   while(wait(dt))do
+      vel = vel + acc
+      Bullet.CFrame = Bullet.CFrame + vel
+
+      t = t + dt
+      if(t>1)then break end
+   end
+   Bullet.CFrame = Play.CFrame
+   targetPractice()
+end
+
+--RPS()
+targetPractice()
