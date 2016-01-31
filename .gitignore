@@ -1,6 +1,7 @@
 [Bb]uild/
 pebbleparty/.lock-waf_darwin_build
 
+/node_modules/
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
