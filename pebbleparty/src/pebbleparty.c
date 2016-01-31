@@ -311,6 +311,7 @@ void input_handler(AccelData *data, uint32_t samples){
             dict_write_int(iterator, ACTION, &mode, sizeof(int), true);
             dict_write_int(iterator, MAGA, &magna, sizeof(int), true);
             app_timer_register(ACTION_RESET_DELAY, action_delay_handler, NULL);
+            controlled_vibrate(mode);
          }
 
          app_message_outbox_send();
