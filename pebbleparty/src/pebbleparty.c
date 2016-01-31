@@ -25,8 +25,27 @@
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
 const char* secondary_server = "http://faustfamily.me";
 
-static Window *window;
-static TextLayer *text_layer;
+static Window* window;
+static TextLayer* text_layer;
+
+static ActionBarLayer* action_bar;
+
+static ActionMenu* action_menu;
+static ActionMenuLevel* root_level;
+
+
+
+typedef enum {
+  primary,
+  secondary,
+  custom
+} ServerType;
+
+typedef struct {
+  ServerType type;
+} Context;
+
+
 
 int mx, my, mz; //Maximum x,y,z acceleration
 int px, py, pz; //Previous x,y,z accerlation
@@ -34,19 +53,25 @@ bool vibrated = false;
 bool recent_action = false;
 
 void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  mx = my = mz = 0; //Reset recorded max accelerations
+   mx = my = mz = 0; //Reset recorded max accelerations
+
+   ActionMenuConfig config = (ActionMenuConfig) {
+      .root_level = root_level,
+      .colors = {
+        .background = GColorChromeYellow,
+        .foreground = GColorBlack,
+      },
+      .align = ActionMenuAlignCenter
+   };
+
+   action_menu = action_menu_open(&config);
+
 }
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
    ////TO BE MOVED LATER////
    // will be selectable
 
-   DictionaryIterator *iterator;
-   app_message_outbox_begin(&iterator);
-
-   dict_write_cstring(iterator, ADDRESS, secondary_server);
-
-   app_message_outbox_send();
 }
 
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -57,6 +82,22 @@ void click_config_provider(void *context) {
    window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
    window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
    window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+}
+
+void action_performed_callback(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+   ServerType server = (ServerType)action_menu_item_get_action_data(action);
+
+   DictionaryIterator *iterator;
+   app_message_outbox_begin(&iterator);
+
+   if(server == primary) {
+      dict_write_cstring(iterator, ADDRESS, primary_server);
+   } 
+   else if (server == secondary) {
+      dict_write_cstring(iterator, ADDRESS, secondary_server);
+   }
+
+   app_message_outbox_send();
 }
 
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -76,6 +117,7 @@ void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 }
 
 void window_load(Window *window) {
+   /*
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
@@ -84,7 +126,25 @@ void window_load(Window *window) {
   text_layer_set_overflow_mode(text_layer, GTextOverflowModeWordWrap);
   text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
 
-  layer_add_child(window_layer, text_layer_get_layer(text_layer));
+  layer_add_child(window_layer, text_layer_get_layer(text_layer));*/
+
+   Layer *window_layer = window_get_root_layer(window);
+   GRect bounds = layer_get_bounds(window_layer);
+
+   //s_ellipsis_bitmap = gbitmap_create_with_resource(RESOURCE_ID_ELLIPSIS);
+
+   action_bar = action_bar_layer_create();
+   action_bar_layer_set_click_config_provider(action_bar, click_config_provider);
+   //action_bar_layer_set_icon(action_bar, BUTTON_ID_SELECT, s_ellipsis_bitmap);
+   action_bar_layer_add_to_window(action_bar, window);
+
+   text_layer = text_layer_create(GRect(0, 0, bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h));
+   text_layer_set_text(text_layer, "Welcome to Pebble Party. Choose a server from the menu.");
+   text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+   text_layer_set_text_color(text_layer, GColorBlack);
+   text_layer_set_background_color(text_layer, GColorClear);
+   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
+   layer_add_child(window_layer, text_layer_get_layer(text_layer));
 }
 
 void window_unload(Window *window) {
@@ -190,7 +250,7 @@ void input_handler(AccelData *data, uint32_t samples){
 
       int magna = misqrt(dx*dx + dy*dy + dz*dz);
 
-      #ifdef DEBUGN
+      #ifdef DEBUG
          DictionaryIterator *iterator;
          app_message_outbox_begin(&iterator);
 
@@ -217,8 +277,6 @@ void input_handler(AccelData *data, uint32_t samples){
          if (abs(dy) + abs(dz) > abs(dx)){
             mode = 1;
          }
-
-         
 
          if(mode > -1) {
             recent_action = true;
@@ -254,6 +312,15 @@ void input_handler(AccelData *data, uint32_t samples){
    pz = z;
 }
 
+void init_action_menu(){
+   root_level = action_menu_level_create(3);
+
+   action_menu_level_add_action(root_level, "Primary server", action_performed_callback, (void*)primary);
+   action_menu_level_add_action(root_level, "Backup server", action_performed_callback, (void*)secondary);
+   action_menu_level_add_action(root_level, "Custom server", action_performed_callback, (void*)custom);
+
+}
+
 
 void init(void) {
    mx = 0;
@@ -281,6 +348,8 @@ void init(void) {
 
    const bool animated = true;
    window_stack_push(window, animated);
+
+   init_action_menu();
 }
 
 void deinit(void) {
