@@ -10,6 +10,7 @@ local Bullet = workspace.Bullet;
 local Target = workspace.Target;
 local Play = workspace.Play;
 local scale = 1000;
+local rp = false;
 
 game.Players.ChildAdded:connect(function(player)
    player.CharacterAdded:connect(function(character)
@@ -24,9 +25,11 @@ function waitForInput(whichURL)
       pcall(function()
          local myTableJSON = HS:GetAsync(whichURL, true)
          local obj = HS:JSONDecode(myTableJSON)
-         obj.DAX = math.abs(obj.DAX)
-         obj.DAY = math.abs(obj.DAY)
-         obj.DAZ = math.abs(obj.DAZ)
+         if(rp)then
+            obj.DAX = math.abs(obj.DAX)
+            obj.DAY = math.abs(obj.DAY)
+            obj.DAZ = math.abs(obj.DAZ)
+         end
          if(obj.DAX > obj.DAY and obj.DAX > obj.DAZ)then
             action = 0
          elseif(obj.DAY > obj.DAX and obj.DAY > obj.DAZ)then
@@ -83,6 +86,7 @@ function Destroy(parts)
 end
 
 function RPS()
+   rp = true
    Bullet.Transparency =1
    Target.Transparency =1
    local ai = math.random(0,2)
@@ -108,13 +112,15 @@ end
 
 function targetPractice()
    waitForInput(URL1)
-   
-   local vel = Vector3.new(-data.DAX/scale,data.DAZ/scale,-data.DAY/scale)
+   action = -1
+   local vel = Vector3.new(math.abs(data.DAX)/scale,data.DAZ/scale,data.DAY/scale)
    local acc = -vel.unit/30
    Bullet.CFrame = Play.CFrame + vel
    local t = 0
    local dt = 0.01
-   while(wait(dt))do
+   spawn(function() targetPractice() end)
+   while(action==-1)do
+      wait(dt)
       vel = vel + acc
       Bullet.CFrame = Bullet.CFrame + vel
 
@@ -122,8 +128,7 @@ function targetPractice()
       if(t>1)then break end
    end
    Bullet.CFrame = Play.CFrame
-   targetPractice()
 end
 
-RPS()
---targetPractice()
+--RPS()
+targetPractice()
