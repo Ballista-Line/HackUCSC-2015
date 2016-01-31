@@ -15,7 +15,7 @@ Pebble.addEventListener('appmessage',
       address = e.payload.ADDRESS;
       console.log('Using address: '+address)
       var req = new XMLHttpRequest();
-      req.open('GET', address+'?create=true&id='+token);
+      req.open('GET', address+'?id='+token);
       req.send();
     }else{
       var message = JSON.stringify(e.payload);
