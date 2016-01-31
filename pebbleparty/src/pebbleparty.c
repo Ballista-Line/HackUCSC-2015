@@ -24,8 +24,8 @@
 //Doesn't work as a variable for some reason
 #define ACCEL_SAMPLES 5
 
-const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
-const char* secondary_server = "http://faustfamily.me";
+const char* primary_server = "panopticon.ballistaline.com/pebble.php";
+const char* secondary_server = "faustfamily.me";
 const char* custom_server = "thiswebsitewontworkdsffd.com";
 
 static Window* window;

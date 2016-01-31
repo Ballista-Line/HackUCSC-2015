@@ -1,6 +1,10 @@
+//var ws = new WebSocket('ws://10.0.1.14:8888');
+var ws = new WebSocket('ws://169.233.11.119:8888');
 
 var token = null;
 var address = "";
+var wsaddres = "";
+
 //NOTE: ready is only sent once per run of pebbleparty
 Pebble.addEventListener("ready",
     function(e) {
@@ -12,10 +16,19 @@ Pebble.addEventListener("ready",
 Pebble.addEventListener('appmessage',
   function(e) {
     if(e.payload.ADDRESS!=null){
-      address = e.payload.ADDRESS;
+      address = 'http://'+e.payload.ADDRESS;
+
+
+
       console.log('Using address: '+address)
       var req = new XMLHttpRequest();
       req.open('GET', address+'?id='+token);
+
+
+      wsaddres = e.payload.ADDRESS;
+      ws = new WebSocket('ws://'+e.payload.ADDRESS);
+
+      ws.send("hello");
 
 
       req.onreadystatechange = function() {
@@ -52,6 +65,13 @@ Pebble.addEventListener('appmessage',
       var req = new XMLHttpRequest();
       req.open('GET', address+'?data='+message+'&id='+token);
       req.send();
+
+      ws.send("lolol");
+
+
+
+
+
     }
   }
 );
