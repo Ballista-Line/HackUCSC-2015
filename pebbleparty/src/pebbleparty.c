@@ -6,11 +6,17 @@
 #define DAY 1
 #define DAZ 2
 #define ACTION 3
-#define FORCE 4
+#define MAGA 4
 #define ADDRESS 5
 
 #define MAIN 0
 #define ALT 1
+
+#define ACTION_RESET_DELAY 500
+#define VIBE_RESET_DELAY 300
+
+//Doesn't work as a variable for some reason
+#define ACCEL_SAMPLES 5
 
 const char* primary_server = "http://panopticon.ballistaline.com/pebble.php";
 
@@ -126,27 +132,38 @@ void controlled_vibrate(int mode){
 
       if(mode == MAIN) vibes_short_pulse();
       if(mode == ALT) vibes_double_pulse();
-      app_timer_register(300, vibration_reset_handler, NULL);
+      app_timer_register(VIBE_RESET_DELAY, vibration_reset_handler, NULL);
 }
 
-void send_action(int mode) {
+void send_action(int mode, int magnitude) {
    recent_action = true;
 
    DictionaryIterator *iterator;
    app_message_outbox_begin(&iterator);
    dict_write_int(iterator, ACTION, &mode, sizeof(int), true);
+   dict_write_int(iterator, MAGA, &magnitude, sizeof(int), true);
    app_message_outbox_send();
 
-
-   app_timer_register(300, action_delay_handler, NULL);
+   app_timer_register(ACTION_RESET_DELAY, action_delay_handler, NULL);
 }
 
 void input_handler(AccelData *data, uint32_t samples){
-   int x = data[0].x;
-   int y = data[0].y;
-   int z = data[0].z;
+   int x = 0;
+   int y = 0;
+   int z = 0;
+
+   for(unsigned int i = 0; i < ACCEL_SAMPLES; i++){
+      x += data[i].x;
+      y += data[i].y;
+      z += data[i].z;
+   }
+
+   x = x / ACCEL_SAMPLES;
+   y /= ACCEL_SAMPLES;
+   z /= ACCEL_SAMPLES;
 
    //Check if there is a new maximum acceleration
+
    if(x > mx) mx = x;
    if(y > my) my = y;
    if(z > mz) mz = z;
@@ -191,7 +208,10 @@ void input_handler(AccelData *data, uint32_t samples){
 
 
 
-   if((abs(dx) | abs(dy) | abs(dz)) > 1000 && !recent_action) {
+   if(((abs(dx) > 1500) || (abs(dy) > 1500) || (abs(dz) > 1500)) && !recent_action) {
+
+
+      int magna = misqrt(dx*dx + dy*dy + dz*dz);
 
       #ifdef DEBUGN
          DictionaryIterator *iterator;
@@ -201,14 +221,29 @@ void input_handler(AccelData *data, uint32_t samples){
          dict_write_int(iterator, DAY, &dy, sizeof(dy), true);
          dict_write_int(iterator, DAZ, &dz, sizeof(dz), true);
 
+
+         int mode = -1;
+         if (abs(dx) > abs(dy)) mode = 0;
+         else
+         if (abs(dy) + abs(dz) > abs(dx)) mode = 1;
+
+         if(mode > -1) {
+            recent_action = true;
+            dict_write_int(iterator, ACTION, &mode, sizeof(int), true);
+            dict_write_int(iterator, MAGA, &magna, sizeof(int), true);
+            app_timer_register(ACTION_RESET_DELAY, action_delay_handler, NULL);
+         }
+
          app_message_outbox_send();
+
+
+      #else
+         if (abs(dx) > abs(dy)) send_action(MAIN, magna);
+         else
+         if (abs(dy) + abs(dz) > abs(dx)) send_action(ALT, magna);
       #endif
 
 
-
-      if (abs(dx) > abs(dy)) send_action(MAIN);
-      else
-      if (abs(dy) + abs(dz) > abs(dx)) send_action(ALT);
       
 
 
@@ -264,9 +299,8 @@ void init(void) {
         .unload = window_unload,
    });
 
-   uint32_t samples = 1;
-   accel_data_service_subscribe(samples, input_handler);
-   accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+   accel_data_service_subscribe(ACCEL_SAMPLES, input_handler);
+   accel_service_set_sampling_rate(ACCEL_SAMPLING_50HZ);
 
    const bool animated = true;
    window_stack_push(window, animated);

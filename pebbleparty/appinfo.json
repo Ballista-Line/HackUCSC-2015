@@ -14,7 +14,7 @@
     "DAY": 1,
     "DAZ": 2,
     "ACTION":3,
-    "FORCE":4,
+    "MAGA":4,
     "ADDRESS":5
   },
   "resources": {
